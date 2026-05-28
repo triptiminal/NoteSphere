@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leaderboard – NoteSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/logout-feature.css"/>
+  <link rel="stylesheet" href="../css/header-enhanced.css"/>
+  <style>
+    .podium { display:flex; align-items:flex-end; justify-content:center; gap:12px; margin-bottom:40px; }
+    .podium-item { display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .podium-block { width:120px; border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+      display:flex; align-items:center; justify-content:center;
+      font-family:var(--font-display); font-weight:800; font-size:24px; }
+    .p1 { height:110px; background:rgba(245,166,35,.2); border:1px solid rgba(245,166,35,.4); }
+    .p2 { height:80px;  background:rgba(156,163,175,.15); border:1px solid rgba(156,163,175,.3); }
+    .p3 { height:60px;  background:rgba(180,100,50,.15); border:1px solid rgba(180,100,50,.3); }
+    .podium-name  { font-size:12px; font-weight:600; text-align:center; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .podium-score { font-size:11px; color:var(--text-muted); }
+    .my-rank-card { background:var(--accent-subtle); border:1px solid var(--accent);
+      border-radius:var(--radius-lg); padding:16px 20px;
+      display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="mobile-menu-btn" id="mobile-menu-btn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="navbar-search">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search-input" placeholder="Search contributors…"/>
+  </div>
+  <div class="navbar-right"><div id="nav-user"></div></div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="app-layout">
+  <main class="main-content">
+    <div class="page-header fade-up">
+      <h2>🏆 Leaderboard</h2>
+      <p>Top contributors ranked by community votes</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px">
+      <div class="stat-card fade-up fade-up-1">
+        <div class="stat-label">Contributors</div>
+        <div class="stat-value" id="stat-contributors">–</div>
+        <div class="stat-sub">Active members</div>
+      </div>
+      <div class="stat-card fade-up fade-up-2">
+        <div class="stat-label">Total Notes</div>
+        <div class="stat-value text-accent" id="stat-total-notes">–</div>
+        <div class="stat-sub">Shared on platform</div>
+      </div>
+      <div class="stat-card fade-up fade-up-3">
+        <div class="stat-label">Your Rank</div>
+        <div class="stat-value text-green" id="stat-my-rank">–</div>
+        <div class="stat-sub">Current position</div>
+      </div>
+    </div>
+
+    <div class="my-rank-card fade-up hidden" id="my-rank-card">
+      <div id="my-rank-avatar"></div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px" id="my-rank-name"></div>
+        <div style="font-size:12px;color:var(--text-muted)" id="my-rank-info"></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-display);font-size:24px;font-weight:800;color:var(--accent-light)" id="my-rank-score"></div>
+        <div style="font-size:11px;color:var(--text-muted)">points</div>
+      </div>
+    </div>
+
+    <div class="podium fade-up" id="podium"></div>
+
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between" class="fade-up">
+      <h3>Full Rankings</h3>
+      <span class="text-sm text-muted" id="list-count"></span>
+    </div>
+
+    <div id="leaderboard-list">
+      <div class="empty-state"><div class="spinner lg"></div></div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+if (!Auth.isLoggedIn()) {
+  window.location.href = '../index.html';
+} else {
+  init();
+}
+
+let allEntries = [];
+
+function init() {
+  buildLayout('leaderboard');
+  loadLeaderboard();
+  document.getElementById('search-input').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    renderList(allEntries.filter(e => e.name.toLowerCase().includes(q)));
+  });
+}
+
+async function loadLeaderboard() {
+  const res = await api.get('/leaderboard');
+  if (!res || !res.ok) { document.getElementById('leaderboard-list').innerHTML = '<p class="text-muted">Failed to load</p>'; return; }
+  allEntries = res.data.data;
+  const user = Auth.getUser();
+  const totalNotes = allEntries.reduce((s, e) => s + e.noteCount, 0);
+  document.getElementById('stat-contributors').textContent = allEntries.length;
+  document.getElementById('stat-total-notes').textContent  = totalNotes;
+
+  if (user) {
+    const myEntry = allEntries.find(e => e.userId === user.id);
+    if (myEntry) {
+      document.getElementById('stat-my-rank').textContent = `#${myEntry.rank}`;
+      const card = document.getElementById('my-rank-card');
+      card.classList.remove('hidden');
+      document.getElementById('my-rank-avatar').innerHTML = avatarHtml(user.name, user.avatarColor, 'lg');
+      document.getElementById('my-rank-name').textContent = user.name;
+      document.getElementById('my-rank-info').textContent = `Rank #${myEntry.rank} · ${myEntry.noteCount} notes`;
+      document.getElementById('my-rank-score').textContent = myEntry.contributorScore;
+    } else {
+      document.getElementById('stat-my-rank').textContent = 'Unranked';
+    }
+  }
+
+  renderPodium(allEntries.slice(0, 3));
+  renderList(allEntries);
+}
+
+function renderPodium(top) {
+  if (!top.length) return;
+  const order  = top.length >= 2 ? [top[1], top[0], top[2]].filter(Boolean) : top;
+  const blocks = ['p2','p1','p3'];
+  const medals = top.length >= 2 ? ['🥈','🥇','🥉'] : ['🥇'];
+  const sizes  = top.length >= 2 ? ['','lg',''] : ['lg'];
+  document.getElementById('podium').innerHTML = order.map((entry, i) => `
+    <div class="podium-item">
+      ${avatarHtml(entry.name, entry.avatarColor, sizes[i] || '')}
+      <div class="podium-name">${escapeHtml(entry.name)}</div>
+      <div class="podium-score">${entry.contributorScore} pts</div>
+      <div class="podium-block ${blocks[i]}">${medals[i]}</div>
+    </div>`).join('');
+}
+
+function renderList(entries) {
+  const list = document.getElementById('leaderboard-list');
+  document.getElementById('list-count').textContent = `${entries.length} contributor${entries.length !== 1 ? 's' : ''}`;
+  const user   = Auth.getUser();
+  const maxScore = entries[0]?.contributorScore || 1;
+
+  if (!entries.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><h3>No contributors yet</h3></div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  entries.forEach((entry, idx) => {
+    const isMe         = user && entry.userId === user.id;
+    const rankClass    = entry.rank === 1 ? 'top-1' : entry.rank === 2 ? 'top-2' : entry.rank === 3 ? 'top-3' : '';
+    const badgeClass   = entry.rank === 1 ? 'gold' : entry.rank === 2 ? 'silver' : entry.rank === 3 ? 'bronze' : '';
+    const pct          = Math.round((entry.contributorScore / maxScore) * 100);
+    const row          = document.createElement('div');
+    row.className      = `leaderboard-row ${rankClass} fade-up`;
+    row.style.animationDelay = `${idx * 0.03}s`;
+    if (isMe) row.style.outline = '2px solid var(--accent)';
+    row.innerHTML = `
+      <div class="rank-badge ${badgeClass}">${entry.rank}</div>
+      ${avatarHtml(entry.name, entry.avatarColor)}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px">
+          ${escapeHtml(entry.name)}
+          ${isMe ? '<span class="badge badge-accent" style="font-size:10px">You</span>' : ''}
+        </div>
+        <div class="score-bar-wrap" style="margin-top:6px">
+          <div class="score-bar-label">
+            <span>${entry.noteCount} note${entry.noteCount !== 1 ? 's' : ''}</span>
+            <span>${entry.contributorScore} pts</span>
+          </div>
+          <div class="score-bar">
+            <div class="score-bar-fill" style="width:0%" data-pct="${pct}"></div>
+          </div>
+        </div>
+      </div>`;
+    list.appendChild(row);
+  });
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.score-bar-fill').forEach(bar => {
+      setTimeout(() => { bar.style.width = bar.dataset.pct + '%'; }, 100);
+    });
+  });
+}
+</script>
+</body>
+</html>

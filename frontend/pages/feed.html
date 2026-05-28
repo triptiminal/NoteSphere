@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Community Feed – NoteShare</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/logout-feature.css"/>
+  <link rel="stylesheet" href="../css/header-enhanced.css"/>
+  <style>
+    .filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:24px; }
+    .filter-chip { padding:6px 16px; border-radius:var(--radius-full); font-size:13px; font-weight:600;
+      background:var(--bg-card); border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; transition:all .18s; }
+    .filter-chip:hover { border-color:var(--accent); color:var(--accent-light); }
+    .filter-chip.active { background:var(--accent-subtle); border-color:var(--accent); color:var(--accent-light); }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="mobile-menu-btn" id="mobile-menu-btn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="navbar-search">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search-input" placeholder="Search community notes…"/>
+  </div>
+  <div class="navbar-right">
+    <a href="upload.html" class="btn btn-primary btn-sm">+ New Note</a>
+    <div id="nav-user"></div>
+  </div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="app-layout">
+  <main class="main-content">
+    <div class="page-header fade-up">
+      <h2>Community Feed</h2>
+      <p>Discover and rate notes shared by your peers</p>
+    </div>
+
+    <div class="filter-bar fade-up">
+      <button class="filter-chip active" data-filter="latest">Latest</button>
+      <button class="filter-chip" data-filter="top">Top Rated</button>
+      <div style="flex:1"></div>
+      <span id="note-count" class="text-sm text-muted"></span>
+    </div>
+
+    <div class="notes-grid" id="feed-grid">
+      <div style="grid-column:1/-1" class="empty-state"><div class="spinner lg"></div></div>
+    </div>
+
+    <div id="load-more-wrap" class="hidden" style="text-align:center;margin-top:24px">
+      <button class="btn btn-secondary" id="load-more-btn">Load More</button>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+if (!Auth.isLoggedIn()) {
+  window.location.href = '../index.html';
+} else {
+  init();
+}
+
+let allNotes = [], filtered = [], page = 0, pageSize = 12, currentFilter = 'latest';
+
+function init() {
+  buildLayout('feed');
+  loadFeed();
+
+  document.getElementById('search-input').addEventListener('input', debounce(async e => {
+    const q = e.target.value.trim();
+    if (!q) { filtered = [...allNotes]; sortAndRender(); return; }
+    const res = await api.get(`/notes/search?keyword=${encodeURIComponent(q)}`);
+    filtered = res && res.ok ? res.data.data : [];
+    page = 0;
+    renderPage();
+    updateCount();
+  }, 350));
+
+  document.querySelectorAll('.filter-chip').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    sortAndRender();
+  }));
+
+  document.getElementById('load-more-btn').addEventListener('click', () => { page++; renderPage(true); });
+}
+
+async function loadFeed() {
+  const user = Auth.getUser();
+  const res = await api.get(`/notes/feed`);
+  if (!res || !res.ok) {
+    document.getElementById('feed-grid').innerHTML = '<p class="text-muted" style="grid-column:1/-1;text-align:center;padding:40px">Failed to load feed. Is the backend running?</p>';
+    return;
+  }
+  allNotes = res.data.data;
+  filtered = [...allNotes];
+  sortAndRender();
+}
+
+function sortAndRender() {
+  if (currentFilter === 'top') {
+    filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
+  } else {
+    filtered = [...filtered].sort((a, b) => {
+      const da = parseDate(a.createdAt), db = parseDate(b.createdAt);
+      return db - da;
+    });
+  }
+  page = 0;
+  renderPage();
+  updateCount();
+}
+
+function renderPage(append = false) {
+  const grid = document.getElementById('feed-grid');
+  const slice = filtered.slice(page * pageSize, (page + 1) * pageSize);
+  if (!append) grid.innerHTML = '';
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1" class="empty-state">
+      <div class="empty-icon">📭</div>
+      <h3>No notes found</h3>
+      <p>Be the first to share a note!</p>
+      <a href="upload.html" class="btn btn-primary mt-4">Upload Note</a>
+    </div>`;
+    document.getElementById('load-more-wrap').classList.add('hidden');
+    return;
+  }
+
+  slice.forEach((n, i) => {
+    const card = buildNoteCard(n, {
+      onClick: note => {
+
+  console.log("CLICKED NOTE:", note);
+
+  const id = note.id || note.noteId || note._id;
+
+  console.log("ID FOUND:", id);
+
+  if (id) {
+
+  const url = `/pages/note-view.html?id=${id}`;
+
+  console.log("REDIRECT URL:", url);
+
+  window.location.href = `/pages/note-view.html#${id}`;
+
+  return;
+
+} else {
+  console.error("NO ID FOUND", note);
+}
+}
+    });
+    card.style.animationDelay = `${i * 0.04}s`;
+    grid.appendChild(card);
+  });
+
+  const hasMore = (page + 1) * pageSize < filtered.length;
+  document.getElementById('load-more-wrap').classList.toggle('hidden', !hasMore);
+}
+
+function updateCount() {
+  document.getElementById('note-count').textContent = `${filtered.length} note${filtered.length !== 1 ? 's' : ''}`;
+}
+</script>
+</body>
+</html>

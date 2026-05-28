@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard – NoteSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/logout-feature.css"/>
+  <link rel="stylesheet" href="../css/header-enhanced.css"/>
+</head>
+<body>
+<nav class="navbar">
+  <button class="mobile-menu-btn" id="mobile-menu-btn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="navbar-search">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="global-search" placeholder="Search notes…"/>
+  </div>
+  <div class="navbar-right">
+    <a href="upload.html" class="btn btn-primary btn-sm">+ New Note</a>
+    <div id="nav-user"></div>
+  </div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="app-layout">
+  <main class="main-content">
+    <div class="page-header fade-up">
+      <h2 id="welcome-heading">Welcome back 👋</h2>
+      <p>Here's an overview of your academic activity</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:32px">
+      <div class="stat-card fade-up fade-up-1">
+        <div class="stat-label">My Notes</div>
+        <div class="stat-value" id="stat-notes">–</div>
+        <div class="stat-sub">Total uploaded</div>
+      </div>
+      <div class="stat-card fade-up fade-up-2">
+        <div class="stat-label">Total Upvotes</div>
+        <div class="stat-value text-green" id="stat-upvotes">–</div>
+        <div class="stat-sub">Across all notes</div>
+      </div>
+      <div class="stat-card fade-up fade-up-3">
+        <div class="stat-label">Score</div>
+        <div class="stat-value text-accent" id="stat-score">–</div>
+        <div class="stat-sub">Contributor points</div>
+      </div>
+      <div class="stat-card fade-up fade-up-4">
+        <div class="stat-label">Comments</div>
+        <div class="stat-value" id="stat-comments">–</div>
+        <div class="stat-sub">On your notes</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start" id="dash-grid">
+      <div>
+        <div class="flex justify-between items-center" style="margin-bottom:16px">
+          <h3 class="fade-up">My Recent Notes</h3>
+          <a href="my-notes.html" class="btn btn-ghost btn-sm fade-up">View all →</a>
+        </div>
+        <div id="recent-notes-list">
+          <div class="empty-state"><div class="spinner lg"></div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div class="card fade-up">
+          <h3 style="margin-bottom:16px">Quick Actions</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <a href="upload.html"  class="btn btn-primary w-full">+ Upload New Note</a>
+            <a href="feed.html"    class="btn btn-secondary w-full">Browse Community Feed</a>
+            <a href="chatbot.html" class="btn btn-secondary w-full">Ask AI Chatbot</a>
+          </div>
+        </div>
+
+        <div class="card fade-up">
+          <div class="flex justify-between items-center" style="margin-bottom:16px">
+            <h3>Top Contributors</h3>
+            <a href="leaderboard.html" class="btn btn-ghost btn-sm">See all →</a>
+          </div>
+          <div id="mini-leaderboard"><div class="spinner" style="margin:auto"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="search-results-section" class="hidden" style="margin-top:32px">
+      <div class="flex justify-between items-center" style="margin-bottom:16px">
+        <h3>Search Results <span id="search-count" class="text-muted text-sm"></span></h3>
+        <button class="btn btn-ghost btn-sm" id="clear-search">Clear ✕</button>
+      </div>
+      <div class="notes-grid" id="search-results-grid"></div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+if (!Auth.isLoggedIn()) {
+  window.location.href = '../index.html';
+} else {
+  init();
+}
+
+function init() {
+  buildLayout('dashboard');
+  const user = Auth.getUser();
+  if (user) {
+    document.getElementById('welcome-heading').textContent = `Welcome back, ${user.name.split(' ')[0]} 👋`;
+    document.getElementById('stat-score').textContent = user.contributorScore;
+  }
+  loadStats();
+  loadRecentNotes();
+  loadMiniLeaderboard();
+
+  const searchInput = document.getElementById('global-search');
+  searchInput.addEventListener('input', debounce(async (e) => {
+    const q = e.target.value.trim();
+    if (!q) {
+      document.getElementById('search-results-section').classList.add('hidden');
+      document.getElementById('dash-grid').classList.remove('hidden');
+      return;
+    }
+    document.getElementById('search-results-section').classList.remove('hidden');
+    document.getElementById('dash-grid').classList.add('hidden');
+    document.getElementById('search-results-grid').innerHTML = '<div class="empty-state"><div class="spinner lg"></div></div>';
+    const res = await api.get(`/notes/search?keyword=${encodeURIComponent(q)}`);
+    const notes = res && res.ok ? res.data.data : [];
+    document.getElementById('search-count').textContent = `(${notes.length} results)`;
+    renderGrid(document.getElementById('search-results-grid'), notes);
+  }, 400));
+
+  document.getElementById('clear-search').addEventListener('click', () => {
+    searchInput.value = '';
+    document.getElementById('search-results-section').classList.add('hidden');
+    document.getElementById('dash-grid').classList.remove('hidden');
+  });
+}
+
+async function loadStats() {
+  const res = await api.get('/notes/my');
+  if (!res || !res.ok) return;
+  const notes = res.data.data;
+  document.getElementById('stat-notes').textContent    = notes.length;
+  document.getElementById('stat-upvotes').textContent  = notes.reduce((s, n) => s + n.upvotes, 0);
+  document.getElementById('stat-comments').textContent = notes.reduce((s, n) => s + n.commentCount, 0);
+}
+
+async function loadRecentNotes() {
+  const res = await api.get('/notes/my');
+  const container = document.getElementById('recent-notes-list');
+  if (!res || !res.ok) { container.innerHTML = '<p class="text-muted">Failed to load notes</p>'; return; }
+  const notes = res.data.data.slice(0, 4);
+  if (!notes.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📝</div><h3>No notes yet</h3>
+      <p>Upload your first note to get started</p>
+      <a href="upload.html" class="btn btn-primary mt-4">Upload Note</a>
+    </div>`;
+    return;
+  }
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'notes-grid';
+  notes.forEach(n => grid.appendChild(buildNoteCard(n, {
+    onClick: note => {
+      const id = note.id || note.noteId;
+      if (id) {
+        window.location.href = `note-view.html?id=${id}`;
+      } else {
+        Toast.error('Error: Cannot open note (missing ID)');
+      }
+    }
+  })));
+  container.appendChild(grid);
+}
+
+async function loadMiniLeaderboard() {
+  const res = await api.get('/leaderboard');
+  const container = document.getElementById('mini-leaderboard');
+  if (!res || !res.ok) { container.innerHTML = '<p class="text-muted text-sm">Failed to load</p>'; return; }
+  const entries = res.data.data.slice(0, 5);
+  const medals = ['🥇','🥈','🥉'];
+  container.innerHTML = entries.map((e, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="width:20px;text-align:center;font-size:14px">${medals[i] || e.rank}</span>
+      ${avatarHtml(e.name, e.avatarColor)}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary)">${escapeHtml(e.name)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${e.noteCount} notes</div>
+      </div>
+      <div style="font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--accent-light)">${e.contributorScore}</div>
+    </div>`).join('');
+}
+
+function renderGrid(container, notes) {
+  container.innerHTML = '';
+  if (!notes.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><h3>No results</h3></div>';
+    return;
+  }
+  notes.forEach(n => container.appendChild(buildNoteCard(n, {
+    onClick: note => {
+      const id = note.id || note.noteId;
+      if (id) {
+        window.location.href = `note-view.html?id=${id}`;
+      } else {
+        Toast.error('Error: Cannot open note (missing ID)');
+      }
+    }
+  })));
+}
+</script>
+</body>
+</html>

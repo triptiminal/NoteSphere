@@ -1,0 +1,87 @@
+# =========================
+# SPRING BOOT / JAVA
+# =========================
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*
+
+# Java compiled files
+*.class
+
+# Spring Boot config secrets
+application.properties
+application.yml
+
+# =========================
+# JAVASCRIPT / NODE.JS
+# =========================
+
+# Node modules
+node_modules/
+
+# Package lock files (optional)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build folders
+dist/
+build/
+
+# Cache files
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+
+# ESLint cache
+.eslintcache
+
+# Temporary files
+tmp/
+temp/
+
+# =========================
+# UPLOADS / GENERATED FILES
+# =========================
+
+uploads/
+generated/

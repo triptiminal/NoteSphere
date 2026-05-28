@@ -1,0 +1,293 @@
+/* ─── NOTE VIEW PAGE STYLES ────────────────────────────────────────────── */
+
+.note-content-body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+  transition: color 0.18s;
+}
+
+.back-link:hover {
+  color: var(--text-primary);
+}
+
+/* ─── COMMENT STYLES ────────────────────────────────────────────────────── */
+
+.comment-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-body {
+  flex: 1;
+}
+
+.comment-author {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.comment-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.comment-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+.comment-delete {
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  float: right;
+  transition: color 0.18s;
+}
+
+.comment-delete:hover {
+  color: var(--red);
+}
+
+/* ─── AI LOADING INDICATOR ───────────────────────────────────────────────── */
+
+.ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ─── OCR STATUS ─────────────────────────────────────────────────────────── */
+
+.ocr-status {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-top: 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ocr-status.processing {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.ocr-status.success {
+  border-color: var(--green);
+  background: var(--green-subtle);
+  color: var(--green);
+}
+
+.ocr-status.error {
+  border-color: var(--red);
+  background: var(--red-subtle);
+  color: var(--red);
+}
+
+.ocr-progress {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-hover);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ocr-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+/* ─── PDF VIEWER ENHANCEMENTS ────────────────────────────────────────────── */
+
+.pdf-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pdf-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pdf-action-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.pdf-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pdf-action-btn.processing {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── EXTRACTED TEXT PREVIEW ──────────────────────────────────────────────── */
+
+.extracted-text-preview {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.extracted-text-preview::-webkit-scrollbar {
+  width: 6px;
+}
+
+.extracted-text-preview::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+
+/* ─── CHATBOT CONVERSATION ────────────────────────────────────────────────── */
+
+.chatbot-conversation {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-top: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-bubble {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 90%;
+}
+
+.chat-bubble.user {
+  background: var(--accent);
+  color: #fff;
+  align-self: flex-end;
+  border-radius: var(--radius-md) var(--radius-sm) var(--radius-md) var(--radius-md);
+}
+
+.chat-bubble.ai {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  align-self: flex-start;
+  border-radius: var(--radius-sm) var(--radius-md) var(--radius-md) var(--radius-md);
+}
+
+/* ─── SUMMARY ENHANCEMENTS ───────────────────────────────────────────────── */
+
+.summary-enhanced {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #93c5fd;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-top: 12px;
+}
+
+.summary-enhanced-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d4ed8;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-enhanced-content {
+  font-size: 14px;
+  color: #1e40af;
+  line-height: 1.8;
+}
+
+.summary-source-info {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #bfdbfe;
+  font-size: 12px;
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── RESPONSIVE ADJUSTMENTS ──────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .pdf-actions {
+    flex-direction: column;
+  }
+
+  .pdf-action-btn {
+    width: 100%;
+  }
+
+  .chatbot-conversation {
+    max-height: 300px;
+  }
+}

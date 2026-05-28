@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Chatbot – NoteSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/logout-feature.css"/>
+  <link rel="stylesheet" href="../css/header-enhanced.css"/>
+  <style>
+    .chat-page { display:flex; flex-direction:column; height:calc(100vh - var(--nav-h) - 64px); }
+    .chat-header { display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      background:var(--bg-card); border-radius:var(--radius-xl) var(--radius-xl) 0 0; }
+    .chat-header-info { display:flex; align-items:center; gap:12px; }
+    .ai-avatar { width:40px; height:40px; border-radius:12px;
+      background:linear-gradient(135deg,var(--accent),#a855f7);
+      display:flex; align-items:center; justify-content:center; font-size:20px; }
+    .chat-messages { flex:1; overflow-y:auto; padding:24px;
+      display:flex; flex-direction:column; gap:16px; background:var(--bg-surface); }
+    .chat-msg { display:flex; gap:12px; max-width:80%; animation:fadeUp .3s ease both; }
+    .chat-msg.user { flex-direction:row-reverse; align-self:flex-end; }
+    .msg-bubble { padding:12px 16px; font-size:14px; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
+    .chat-msg.user .msg-bubble { background:var(--accent); color:#fff;
+      border-radius:var(--radius-lg) var(--radius-sm) var(--radius-lg) var(--radius-lg); }
+    .chat-msg.bot .msg-bubble { background:var(--bg-card); color:var(--text-primary);
+      border-radius:var(--radius-sm) var(--radius-lg) var(--radius-lg) var(--radius-lg);
+      border:1px solid var(--border); }
+    .typing-indicator .msg-bubble { display:flex; align-items:center; gap:4px; padding:14px 18px; }
+    .typing-dot { width:7px; height:7px; border-radius:50%; background:var(--text-muted); animation:typingBounce 1.2s infinite; }
+    .typing-dot:nth-child(2) { animation-delay:.2s; }
+    .typing-dot:nth-child(3) { animation-delay:.4s; }
+    @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+    .chat-input-area { border-top:1px solid var(--border); padding:16px 20px;
+      display:flex; gap:10px; align-items:flex-end;
+      background:var(--bg-card); border-radius:0 0 var(--radius-xl) var(--radius-xl); }
+    .chat-input-area textarea { flex:1; background:var(--bg-input); border:1px solid var(--border);
+      border-radius:var(--radius-md); padding:11px 14px; color:var(--text-primary);
+      resize:none; outline:none; font-size:14px; max-height:140px;
+      line-height:1.5; transition:border-color .2s; font-family:var(--font-body); }
+    .chat-input-area textarea:focus { border-color:var(--border-focus); }
+    .send-btn { width:44px; height:44px; border-radius:var(--radius-md); flex-shrink:0;
+      background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .send-btn:hover { background:var(--accent-light); }
+    .send-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .suggestion-chips { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 16px; background:var(--bg-surface); }
+    .chip { padding:6px 14px; border-radius:var(--radius-full); font-size:13px;
+      background:var(--bg-card); border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; }
+    .chip:hover { border-color:var(--accent); color:var(--accent-light); }
+    .msg-time { font-size:10px; color:var(--text-muted); margin-top:4px; }
+    .chat-msg.user .msg-time { text-align:left; }
+    .chat-msg.bot  .msg-time { text-align:right; }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="mobile-menu-btn" id="mobile-menu-btn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="navbar-right"><div id="nav-user"></div></div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="app-layout">
+  <main class="main-content" style="padding:24px;display:flex;flex-direction:column;height:calc(100vh - var(--nav-h))">
+    <div class="chat-page">
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="ai-avatar">🤖</div>
+          <div>
+            <div style="font-family:var(--font-display);font-weight:700;font-size:15px">Academic AI Assistant</div>
+            <div style="font-size:12px;color:var(--green);display:flex;align-items:center;gap:4px">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>
+              Online · Ready to help
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="clear-chat" style="color:var(--text-muted)">Clear chat</button>
+      </div>
+
+      <div class="chat-messages" id="chat-messages"></div>
+
+      <div class="suggestion-chips" id="suggestion-chips">
+        <span class="chip" data-msg="Explain Newton's laws of motion">⚡ Newton's Laws</span>
+        <span class="chip" data-msg="What is the difference between mitosis and meiosis?">🧬 Mitosis vs Meiosis</span>
+        <span class="chip" data-msg="How do I solve quadratic equations?">📐 Quadratic Equations</span>
+        <span class="chip" data-msg="Explain the French Revolution briefly">🏛️ French Revolution</span>
+        <span class="chip" data-msg="Give me tips for effective studying">📚 Study Tips</span>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea id="chat-input" placeholder="Ask me anything academic… (Ctrl+Enter to send)" rows="1"></textarea>
+        <button class="send-btn" id="send-btn">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+if (!Auth.isLoggedIn()) {
+  window.location.href = '../index.html';
+} else {
+  init();
+}
+
+const HISTORY_KEY = 'chat_history';
+let isTyping = false;
+
+function init() {
+  buildLayout('chatbot');
+  const saved = loadHistory();
+  if (saved.length) { saved.forEach(m => appendMessage(m.role, m.content, m.time, false)); }
+  else { appendWelcome(); }
+
+  document.getElementById('send-btn').addEventListener('click', sendMessage);
+  document.getElementById('chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); sendMessage(); }
+    autoResize(e.target);
+  });
+  document.getElementById('chat-input').addEventListener('input', e => autoResize(e.target));
+
+  document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+    document.getElementById('chat-input').value = chip.dataset.msg;
+    document.getElementById('suggestion-chips').style.display = 'none';
+    sendMessage();
+  }));
+
+  document.getElementById('clear-chat').addEventListener('click', () => {
+    if (!confirm('Clear chat history?')) return;
+    localStorage.removeItem(HISTORY_KEY);
+    document.getElementById('chat-messages').innerHTML = '';
+    document.getElementById('suggestion-chips').style.display = 'flex';
+    appendWelcome();
+  });
+
+  scrollToBottom();
+}
+
+function appendWelcome() {
+  appendMessage('bot',
+    `Hello! 👋 I'm your Academic AI Assistant.\n\nI can help you with:\n• Explaining concepts\n• Summarizing topics\n• Answering study questions\n• Problem solving\n\nWhat would you like to learn today?`,
+    null, false);
+}
+
+function appendMessage(role, content, time = null, save = true) {
+  const messages = document.getElementById('chat-messages');
+  const user = Auth.getUser();
+  const ts   = time || new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  const div  = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  if (role === 'user') {
+    div.innerHTML = `
+      ${avatarHtml(user?.name, user?.avatarColor)}
+      <div><div class="msg-bubble">${escapeHtml(content)}</div><div class="msg-time">${ts}</div></div>`;
+  } else {
+    div.innerHTML = `
+      <div class="ai-avatar" style="width:32px;height:32px;border-radius:10px;font-size:16px">🤖</div>
+      <div><div class="msg-bubble">${escapeHtml(content)}</div><div class="msg-time">${ts}</div></div>`;
+  }
+  messages.appendChild(div);
+  scrollToBottom();
+  if (save) saveMessage(role, content, ts);
+  return div;
+}
+
+function showTyping() {
+  const messages = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg bot typing-indicator';
+  div.id = 'typing-indicator';
+  div.innerHTML = `
+    <div class="ai-avatar" style="width:32px;height:32px;border-radius:10px;font-size:16px">🤖</div>
+    <div class="msg-bubble">
+      <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+    </div>`;
+  messages.appendChild(div);
+  scrollToBottom();
+}
+
+function hideTyping() { document.getElementById('typing-indicator')?.remove(); }
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const msg   = input.value.trim();
+  if (!msg || isTyping) return;
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('suggestion-chips').style.display = 'none';
+  isTyping = true;
+  document.getElementById('send-btn').disabled = true;
+  appendMessage('user', msg);
+  showTyping();
+  const res = await api.post('/ai/chat', { message: msg });
+  hideTyping();
+  isTyping = false;
+  document.getElementById('send-btn').disabled = false;
+  if (res && res.ok) {
+    appendMessage('bot', res.data.data.reply);
+  } else {
+    const errMsg = res?.data?.message?.includes('unavailable')
+      ? '⚠️ AI service unavailable. Please add your OpenAI API key to application.properties and restart the backend.'
+      : (res?.data?.message || 'Something went wrong. Please try again.');
+    appendMessage('bot', errMsg);
+  }
+}
+
+function scrollToBottom() { const el = document.getElementById('chat-messages'); el.scrollTop = el.scrollHeight; }
+function autoResize(textarea) { textarea.style.height = 'auto'; textarea.style.height = Math.min(textarea.scrollHeight, 140) + 'px'; }
+function saveMessage(role, content, time) {
+  const history = loadHistory();
+  history.push({ role, content, time });
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-50)));
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch { return []; }
+}
+</script>
+</body>
+</html>

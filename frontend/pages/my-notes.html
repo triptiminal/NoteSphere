@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Notes – NoteSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/logout-feature.css"/>
+  <link rel="stylesheet" href="../css/header-enhanced.css"/>
+</head>
+<body>
+<nav class="navbar">
+  <button class="mobile-menu-btn" id="mobile-menu-btn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="navbar-search">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search-input" placeholder="Search my notes…"/>
+  </div>
+  <div class="navbar-right">
+    <a href="upload.html" class="btn btn-primary btn-sm">+ New Note</a>
+    <div id="nav-user"></div>
+  </div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="app-layout">
+  <main class="main-content">
+    <div class="page-header fade-up">
+      <h2>My Notes</h2>
+      <p>Manage all your uploaded study notes</p>
+    </div>
+    <div style="margin-bottom:24px" class="fade-up">
+      <span id="my-note-count" class="text-sm text-muted"></span>
+    </div>
+    <div class="notes-grid" id="my-notes-grid">
+      <div style="grid-column:1/-1" class="empty-state"><div class="spinner lg"></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-backdrop" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Note</div>
+      <button class="modal-close" id="close-edit-modal">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="edit-form" style="display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="edit-note-id"/>
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input type="text" class="form-input" id="edit-title" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input type="text" class="form-input" id="edit-subject" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Content</label>
+        <textarea class="form-textarea" id="edit-content" style="min-height:140px"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags (comma separated)</label>
+        <input type="text" class="form-input" id="edit-tags" placeholder="e.g. calculus, integration"/>
+      </div>
+      <div class="form-group" style="flex-direction:row;align-items:center;gap:10px">
+        <input type="checkbox" id="edit-public" style="width:16px;height:16px;accent-color:var(--accent)"/>
+        <label class="form-label" for="edit-public" style="margin:0;cursor:pointer">Make publicly visible</label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="cancel-edit">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="save-edit-btn">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-backdrop" id="delete-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">Delete Note</div>
+      <button class="modal-close" id="close-delete-modal">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="color:var(--text-secondary);margin-bottom:20px">
+      Are you sure you want to delete <strong id="delete-note-title"></strong>? This cannot be undone.
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancel-delete">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Delete Note</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+if (!Auth.isLoggedIn()) {
+  window.location.href = '../index.html';
+} else {
+  init();
+}
+
+let myNotes = [];
+let deleteTargetId = null;
+
+function init() {
+  buildLayout('my-notes');
+  loadMyNotes();
+
+  document.getElementById('search-input').addEventListener('input', debounce(async e => {
+    const q = e.target.value.trim();
+    if (!q) { renderNotes(myNotes); return; }
+    const res = await api.get(`/notes/my/search?keyword=${encodeURIComponent(q)}`);
+    renderNotes(res && res.ok ? res.data.data : []);
+  }, 350));
+
+  document.getElementById('close-edit-modal').addEventListener('click', closeEdit);
+  document.getElementById('cancel-edit').addEventListener('click', closeEdit);
+  document.getElementById('edit-modal').addEventListener('click', e => { if (e.target === document.getElementById('edit-modal')) closeEdit(); });
+  document.getElementById('edit-form').addEventListener('submit', saveEdit);
+
+  document.getElementById('close-delete-modal').addEventListener('click', closeDelete);
+  document.getElementById('cancel-delete').addEventListener('click', closeDelete);
+  document.getElementById('delete-modal').addEventListener('click', e => { if (e.target === document.getElementById('delete-modal')) closeDelete(); });
+  document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
+}
+
+async function loadMyNotes() {
+  const res = await api.get('/notes/my');
+  const grid = document.getElementById('my-notes-grid');
+  if (!res || !res.ok) { grid.innerHTML = '<p class="text-muted" style="grid-column:1/-1">Failed to load notes. Make sure you are logged in.</p>'; return; }
+  myNotes = res.data.data;
+  renderNotes(myNotes);
+}
+
+function renderNotes(notes) {
+  const grid = document.getElementById('my-notes-grid');
+  document.getElementById('my-note-count').textContent = `${notes.length} note${notes.length !== 1 ? 's' : ''}`;
+  grid.innerHTML = '';
+  if (!notes.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1" class="empty-state">
+      <div class="empty-icon">📝</div><h3>No notes yet</h3>
+      <p>Start by uploading your first study note</p>
+      <a href="upload.html" class="btn btn-primary mt-4">Upload Note</a>
+    </div>`;
+    return;
+  }
+  notes.forEach(n => {
+    const card = buildNoteCard(n, {
+      showActions: true,
+      onClick: note => {
+
+    const id = note.id || note.noteId || note._id;
+
+    if (id) {
+
+        window.location.href = `/pages/note-view.html#${id}`;
+
+    } else {
+
+        Toast.error('Error: Cannot open note (missing ID)');
+    }
+}
+    });
+    card.querySelector('.edit-btn')?.addEventListener('click', e => { e.stopPropagation(); openEdit(n); });
+    card.querySelector('.delete-btn')?.addEventListener('click', e => { e.stopPropagation(); openDelete(n); });
+    grid.appendChild(card);
+  });
+}
+
+function openEdit(note) {
+  document.getElementById('edit-note-id').value  = note.id;
+  document.getElementById('edit-title').value    = note.title;
+  document.getElementById('edit-subject').value  = note.subject;
+  document.getElementById('edit-content').value  = note.content || '';
+  document.getElementById('edit-tags').value     = (note.tags || []).join(', ');
+  document.getElementById('edit-public').checked = note.isPublic;
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); }
+
+async function saveEdit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('save-edit-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const noteId = document.getElementById('edit-note-id').value;
+  const noteData = {
+    title:    document.getElementById('edit-title').value,
+    subject:  document.getElementById('edit-subject').value,
+    content:  document.getElementById('edit-content').value,
+    tags:     document.getElementById('edit-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    isPublic: document.getElementById('edit-public').checked
+  };
+  const fd = new FormData();
+  fd.append('note', new Blob([JSON.stringify(noteData)], { type: 'application/json' }));
+  const res = await api.uploadPut(`/notes/${noteId}`, fd);
+  btn.disabled = false; btn.textContent = 'Save Changes';
+  if (res && res.ok) { Toast.success('Note updated!'); closeEdit(); loadMyNotes(); }
+  else Toast.error(res?.data?.message || 'Update failed');
+}
+
+function openDelete(note) {
+  deleteTargetId = note.id;
+  document.getElementById('delete-note-title').textContent = note.title;
+  document.getElementById('delete-modal').classList.add('open');
+}
+function closeDelete() { document.getElementById('delete-modal').classList.remove('open'); deleteTargetId = null; }
+
+async function confirmDelete() {
+  if (!deleteTargetId) return;
+  const btn = document.getElementById('confirm-delete-btn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  const res = await api.delete(`/notes/${deleteTargetId}`);
+  btn.disabled = false; btn.textContent = 'Delete Note';
+  if (res && res.ok) { Toast.success('Note deleted'); closeDelete(); loadMyNotes(); }
+  else Toast.error(res?.data?.message || 'Delete failed');
+}
+</script>
+</body>
+</html>

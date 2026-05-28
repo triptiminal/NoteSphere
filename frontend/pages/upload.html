@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload Note – NoteSphere</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/logout-feature.css"/>
+  <link rel="stylesheet" href="../css/header-enhanced.css"/>
+  <style>
+    .upload-page { max-width:720px; margin:0 auto; }
+    .tags-preview { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .tag-removable { display:inline-flex; align-items:center; gap:4px; padding:3px 10px;
+      background:var(--accent-subtle); color:var(--accent-light);
+      border-radius:var(--radius-full); font-size:12px; font-weight:600; cursor:pointer; }
+    .tag-removable:hover { background:var(--red-subtle); color:var(--red); }
+    .file-preview { display:flex; align-items:center; gap:12px; padding:12px 16px;
+      background:var(--bg-input); border:1px solid var(--border);
+      border-radius:var(--radius-md); margin-top:8px; }
+    .progress-bar { height:4px; background:var(--bg-hover); border-radius:99px; overflow:hidden; margin-top:16px; }
+    .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),#a855f7); width:0; transition:width .3s; }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <button class="mobile-menu-btn" id="mobile-menu-btn">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="navbar-right"><div id="nav-user"></div></div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="app-layout">
+  <main class="main-content">
+    <div class="upload-page">
+      <div class="page-header fade-up">
+        <a href="my-notes.html" style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);font-size:13px;margin-bottom:8px">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to My Notes
+        </a>
+        <h2>Upload Note</h2>
+        <p>Share your study material with the community</p>
+      </div>
+
+      <form id="upload-form" class="card fade-up" style="display:flex;flex-direction:column;gap:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="form-label">Note Title *</label>
+            <input type="text" class="form-input" id="note-title" placeholder="e.g. Calculus Integration" required/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject *</label>
+            <input type="text" class="form-input" id="note-subject" placeholder="e.g. Mathematics" required list="subjects-list"/>
+            <datalist id="subjects-list">
+              <option value="Mathematics"/><option value="Physics"/><option value="Chemistry"/>
+              <option value="Biology"/><option value="English"/><option value="History"/>
+              <option value="Computer Science"/><option value="Economics"/>
+            </datalist>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Content</label>
+          <textarea class="form-textarea" id="note-content" style="min-height:180px"
+            placeholder="Write your note content here…"></textarea>
+          <span class="form-hint">This text will be used for AI summarization</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" class="form-input" id="tag-input" placeholder="Add a tag and press Enter"/>
+            <button type="button" class="btn btn-secondary" id="add-tag-btn">Add</button>
+          </div>
+          <div class="tags-preview" id="tags-preview"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Attach File <span class="text-muted">(PDF or Image, max 10MB)</span></label>
+          <div class="upload-zone" id="drop-zone">
+            <div class="upload-zone-icon">📎</div>
+            <p>Drag &amp; drop a file here, or click to browse</p>
+            <span>Supports: PDF, JPG, PNG, GIF, WebP</span>
+            <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" style="display:none"/>
+          </div>
+          <div id="file-preview" class="hidden"></div>
+        </div>
+
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:10px">
+          <input type="checkbox" id="note-public" checked style="width:16px;height:16px;accent-color:var(--accent)"/>
+          <label class="form-label" for="note-public" style="margin:0;cursor:pointer">
+            Make this note publicly visible
+          </label>
+        </div>
+
+        <div id="upload-progress" class="hidden">
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+          <p class="text-sm text-muted" style="margin-top:8px" id="progress-text">Uploading…</p>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px">
+          <a href="my-notes.html" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary" id="submit-btn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Publish Note
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+if (!Auth.isLoggedIn()) {
+  window.location.href = '../index.html';
+} else {
+  init();
+}
+
+let tags = [], selectedFile = null;
+
+function init() {
+  buildLayout('upload');
+
+  const dropZone  = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+  const tagInput = document.getElementById('tag-input');
+  const addTag   = () => {
+    const val = tagInput.value.trim();
+    if (val && !tags.includes(val) && tags.length < 8) { tags.push(val); tagInput.value = ''; renderTags(); }
+  };
+  tagInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } });
+  document.getElementById('add-tag-btn').addEventListener('click', addTag);
+
+  document.getElementById('upload-form').addEventListener('submit', submitNote);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const allowed = ['application/pdf','image/jpeg','image/png','image/gif','image/webp'];
+  if (!allowed.includes(file.type)) { Toast.error('Unsupported file type'); return; }
+  if (file.size > 10 * 1024 * 1024) { Toast.error('File exceeds 10MB limit'); return; }
+  selectedFile = file;
+  const preview = document.getElementById('file-preview');
+  const sizeStr = file.size > 1048576 ? `${(file.size/1048576).toFixed(1)} MB` : `${Math.round(file.size/1024)} KB`;
+  preview.innerHTML = `
+    <div class="file-preview">
+      <span style="font-size:24px">${file.type.includes('pdf') ? '📄' : '🖼️'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">${escapeHtml(file.name)}</span>
+      <span style="font-size:12px;color:var(--text-muted)">${sizeStr}</span>
+      <button type="button" class="btn btn-ghost btn-sm" id="remove-file">✕</button>
+    </div>`;
+  preview.classList.remove('hidden');
+  document.getElementById('remove-file').addEventListener('click', () => { selectedFile = null; preview.classList.add('hidden'); });
+}
+
+function renderTags() {
+  const preview = document.getElementById('tags-preview');
+  preview.innerHTML = tags.map(t => `<span class="tag-removable" data-tag="${escapeHtml(t)}">${escapeHtml(t)} ✕</span>`).join('');
+  document.querySelectorAll('.tag-removable').forEach(el => el.addEventListener('click', () => {
+    tags = tags.filter(t => t !== el.dataset.tag); renderTags();
+  }));
+}
+
+async function submitNote(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Publishing…';
+  document.getElementById('upload-progress').classList.remove('hidden');
+
+  const noteData = {
+    title:    document.getElementById('note-title').value.trim(),
+    subject:  document.getElementById('note-subject').value.trim(),
+    content:  document.getElementById('note-content').value.trim(),
+    tags,
+    isPublic: document.getElementById('note-public').checked
+  };
+
+  const fd = new FormData();
+  fd.append('note', new Blob([JSON.stringify(noteData)], { type: 'application/json' }));
+  if (selectedFile) fd.append('file', selectedFile);
+
+  const res = await api.upload('/notes', fd);
+  console.log('Upload response:', res);
+  btn.disabled = false;
+  document.getElementById('upload-progress').classList.add('hidden');
+
+  if (res && res.ok) {
+    Toast.success('Note published successfully!');
+    setTimeout(() => window.location.href = 'my-notes.html', 800);
+  } else {
+    btn.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Publish Note`;
+    Toast.error(res?.data?.message || 'Upload failed');
+  }
+}
+</script>
+</body>
+</html>
