@@ -6,7 +6,7 @@ NoteSphere is a full-stack collaborative notes sharing platform that enables use
 
 ---
 
-## 🛠️ Technology Stack & Tools Used
+##  Technology Stack & Tools Used
 
 ### Frontend
 
