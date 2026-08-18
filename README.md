@@ -1,6 +1,6 @@
 # NoteSphere – Collaborative Notes Sharing Platform
 
-## 📌 Project Description
+##  Project Description
 
 NoteSphere is a full-stack collaborative notes sharing platform that enables users to upload, manage, search, and share study notes efficiently. The platform provides secure authentication, cloud-based file storage, OCR-powered text extraction, an AI chatbot assistant, and community-driven learning features.
 
@@ -40,7 +40,7 @@ NoteSphere is a full-stack collaborative notes sharing platform that enables use
 
 ---
 
-## ✨ Features & Functionalities Implemented
+##  Features & Functionalities Implemented
 
 ### Authentication & Security
 
@@ -90,7 +90,7 @@ NoteSphere is a full-stack collaborative notes sharing platform that enables use
 
 ---
 
-## 🚀 Installation / Execution Steps
+##  Installation / Execution Steps
 
 ### Prerequisites
 
