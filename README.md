@@ -181,7 +181,7 @@ http://localhost:8080/api
 
 ---
 
-# 📸 Project Screenshots
+#  Project Screenshots
 
 ## Authentication Page
 
